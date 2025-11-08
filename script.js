@@ -10,7 +10,9 @@
     let currentImageIndex = 0;
     let imageUrls = [];
     
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener("DOMContentLoaded", () => {
+  // Initialiser le système d'enregistrement
+  initRegistration();
         const socialLinks = document.querySelector('.social-links');
     const pedDePage = document.getElementById('ped de page');
  if (socialLinks) socialLinks.remove();
@@ -709,13 +711,14 @@ ${(() => {
     return;
   }
 
-  let message = `Olá! Mwen vle rechaje:\n` + 
-                `${currentProduct.nom}\n`;
+  let message = `Olá, Gostaria de solicitar, fazer ou saber mais sobre este produto: ${currentProduct.nom}\n` +
+                `Codigo : ${currentProduct.code}\n` +
+                `Preco : R$ ${currentProduct.prix}`;
 
   if (currentProduct.selectedSize) {
-    message += `\nDesc : ${currentProduct.selectedSize}`;
+    message += `\nT/Desc : ${currentProduct.selectedSize}`;
   } else if (sizesArray.length === 1) {
-    message += `\nDesc : ${sizesArray[0]}`;
+    message += `\nT/Desc : ${sizesArray[0]}`;
   }
 
   window.open(`https://wa.me/916204805?text=${encodeURIComponent(message)}`, '_blank');
@@ -848,3 +851,179 @@ function initLogoTouchHandler(logo) {
 }
 
 document.addEventListener('DOMContentLoaded', waitForLogoAndInit);
+
+// Variables pour l'enregistrement
+let agentsList = [];
+
+// Fonction pour charger la liste des agents
+function loadAgents() {
+  const AGENTS_URL = "https://script.google.com/macros/s/AKfycbzDeSDfYzb_953duQ-HuubILeZfzoRrtNe7d2Z7MEQbvVH9tzFZ1Dm0xTSHyZEgl7BIzg/exec?action=getAgents";
+  
+  fetch(AGENTS_URL)
+    .then(response => response.json())
+    .then(agents => {
+      agentsList = agents;
+      const agentSelect = document.getElementById('agent');
+      
+      agents.forEach(agent => {
+        const option = document.createElement('option');
+        option.value = agent;
+        option.textContent = agent;
+        agentSelect.appendChild(option);
+      });
+    })
+    .catch(error => {
+      console.error('Erreur chargement agents:', error);
+    });
+}
+
+// Fonction pour enregistrer le client
+function registerClient(clientData) {
+  const SAVE_URL = `https://script.google.com/macros/s/AKfycbzDeSDfYzb_953duQ-HuubILeZfzoRrtNe7d2Z7MEQbvVH9tzFZ1Dm0xTSHyZEgl7BIzg/exec` +
+    `?action=saveClient&nom=${encodeURIComponent(clientData.nom)}` +
+    `&tel=${encodeURIComponent(clientData.tel)}` +
+    `&email=${encodeURIComponent(clientData.email)}` +
+    `&agent=${encodeURIComponent(clientData.agent)}`;
+
+  return fetch(SAVE_URL)
+    .then(response => response.json()) // 🔹 Ici, on lit du JSON
+    .then(result => {
+      if (result.success) {
+        // ✅ Succès → enregistrement local
+        localStorage.setItem('clientRegistered', 'true');
+        localStorage.setItem('clientData', JSON.stringify(clientData));
+        console.log(result.message);
+        return { success: true };
+      } else {
+        throw new Error(result.message || 'Erreur lors de l\'enregistrement');
+      }
+    })
+    .catch(error => {
+      console.error('Erreur de requête:', error);
+      return { success: false, message: error.message };
+    });
+}
+
+
+// Fonction pour vérifier si déjà enregistré
+function checkRegistration() {
+  return localStorage.getItem('clientRegistered') === 'true';
+}
+
+// Fonction pour afficher le message
+function showRegisterMessage(message, isError = false) {
+  const messageEl = document.getElementById('register-message');
+  messageEl.textContent = message;
+  messageEl.style.display = 'block';
+  messageEl.style.background = isError ? '#ffebee' : '#e8f5e8';
+  messageEl.style.color = isError ? '#c62828' : '#2e7d32';
+  messageEl.style.border = isError ? '1px solid #ffcdd2' : '1px solid #c8e6c9';
+}
+
+// Initialisation de l'enregistrement
+function initRegistration() {
+  // Vérifier si déjà enregistré
+  if (checkRegistration()) {
+    document.getElementById('register-popup').style.display = 'none';
+    document.body.classList.remove('registration-pending');
+    return;
+  }
+  
+  // Afficher le popup d'enregistrement
+  document.getElementById('register-popup').style.display = 'flex';
+  document.body.classList.add('registration-pending');
+  
+  // Charger la liste des agents
+  loadAgents();
+  
+  // Gérer la soumission du formulaire
+  document.getElementById('register-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = {
+      nom: document.getElementById('nom').value.trim(),
+      tel: document.getElementById('tel').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      agent: document.getElementById('agent').value
+    };
+    
+    // Validation basique
+    if (!formData.nom || !formData.tel) {
+      showRegisterMessage('Veuillez remplir les champs obligatoires (Nom et Téléphone)', true);
+      return;
+    }
+    
+    // Désactiver le bouton pendant l'enregistrement
+    const submitBtn = document.querySelector('.register-btn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Enregistrement...';
+    
+    // Enregistrer le client
+    registerClient(formData)
+      .then(result => {
+        showRegisterMessage('Enregistrement réussi! Accès à l\'application...', false);
+        
+        // Rediriger après un court délai
+        setTimeout(() => {
+          document.getElementById('register-popup').style.display = 'none';
+          document.body.classList.remove('registration-pending');
+          
+          // Charger l'application principale
+          loadMainApp();
+        }, 1500);
+      })
+      .catch(error => {
+        showRegisterMessage('Erreur: ' + error.message, true);
+        
+        // Réactiver le bouton
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Accéder à l\'application';
+      });
+  });
+}
+
+// Fonction pour charger l'application principale
+function loadMainApp() {
+  // Votre code de chargement existant ici
+  const BASE = "https://script.google.com/macros/s/AKfycbzDeSDfYzb_953duQ-HuubILeZfzoRrtNe7d2Z7MEQbvVH9tzFZ1Dm0xTSHyZEgl7BIzg/exec";
+  const logoUrlAPI = BASE + "?page=logo";
+  const dataUrlAPI = BASE + "?page=api";
+
+  const fetchText = (url) => fetch(url, { cache: "no-store" }).then(r => r.text());
+  const fetchJSON = (url) => fetch(url, { cache: "no-store" }).then(r => r.json());
+
+  const waitForImageLoad = (imgUrl, imgEl) => new Promise((resolve) => {
+    if (!imgUrl) return resolve("no-url");
+    const test = new Image();
+    test.onload = () => { imgEl.src = imgUrl; resolve("ok"); };
+    test.onerror = () => { imgEl.alt = "Logo indisponible"; resolve("error"); };
+    test.src = imgUrl;
+  });
+
+  const loader = document.getElementById("page-loader");
+  const app = document.getElementById("app");
+  const logoEl = document.getElementById("logo");
+
+  // Afficher le loader pendant le chargement
+  loader.style.display = "flex";
+  app.classList.remove("app-ready");
+
+  Promise.all([
+    fetchText(logoUrlAPI).then(url => waitForImageLoad(url, logoEl)),
+    fetchJSON(dataUrlAPI)
+  ])
+  .then(([logoStatus, data]) => {
+    if (typeof displayProducts === "function") {
+      displayProducts(data);
+    }
+  })
+  .catch(err => {
+    console.error("Erreur lors du chargement :", err);
+    document.getElementById("produits").innerHTML = 
+      "<div class='alert alert-danger'>Erreur de chargement des données</div>";
+  })
+  .finally(() => {
+    loader.style.display = "none";
+    app.classList.add("app-ready");
+  });
+}
