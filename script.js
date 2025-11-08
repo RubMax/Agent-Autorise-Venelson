@@ -879,6 +879,27 @@ function loadAgents() {
 
 // Fonction pour enregistrer le client
 function registerClient(clientData) {
+  // 🔒 Vérification des champs obligatoires
+  if (!clientData.nom || !clientData.tel || !clientData.email || !clientData.agent) {
+    alert("⚠️ Veuillez remplir tous les champs avant de continuer.");
+    return Promise.resolve({ success: false, message: "Champs manquants" });
+  }
+
+  // 🔹 Validation basique de l’email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(clientData.email)) {
+    alert("❌ L'adresse e-mail est invalide.");
+    return Promise.resolve({ success: false, message: "Email invalide" });
+  }
+
+  // 🔹 Validation du téléphone (au moins 8 chiffres)
+  const telRegex = /^\+?\d{8,}$/;
+  if (!telRegex.test(clientData.tel)) {
+    alert("📞 Le numéro de téléphone doit contenir au moins 8 chiffres.");
+    return Promise.resolve({ success: false, message: "Téléphone invalide" });
+  }
+
+  // ✅ Si tout est bon, on continue
   const SAVE_URL = `https://script.google.com/macros/s/AKfycbzDeSDfYzb_953duQ-HuubILeZfzoRrtNe7d2Z7MEQbvVH9tzFZ1Dm0xTSHyZEgl7BIzg/exec` +
     `?action=saveClient&nom=${encodeURIComponent(clientData.nom)}` +
     `&tel=${encodeURIComponent(clientData.tel)}` +
@@ -886,7 +907,7 @@ function registerClient(clientData) {
     `&agent=${encodeURIComponent(clientData.agent)}`;
 
   return fetch(SAVE_URL)
-    .then(response => response.json()) // 🔹 Ici, on lit du JSON
+    .then(response => response.json())
     .then(result => {
       if (result.success) {
         // ✅ Succès → enregistrement local
@@ -900,6 +921,7 @@ function registerClient(clientData) {
     })
     .catch(error => {
       console.error('Erreur de requête:', error);
+      alert("🚫 Une erreur est survenue lors de l'enregistrement.");
       return { success: false, message: error.message };
     });
 }
