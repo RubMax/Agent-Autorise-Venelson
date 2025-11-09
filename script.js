@@ -877,29 +877,40 @@ function loadAgents() {
     });
 }
 
-// Fonction pour enregistrer le client
-function registerClient(clientData) {
-  // 🔒 Vérification des champs obligatoires
-  if (!clientData.nom || !clientData.tel || !clientData.email || !clientData.agent) {
-    alert("⚠️ Veuillez remplir tous les champs avant de continuer.");
-    return Promise.resolve({ success: false, message: "Champs manquants" });
+function validateClientData(clientData) {
+  // Vérifier que tous les champs existent
+  if (!clientData.nom || clientData.nom.trim().length < 2) {
+    return { valid: false, message: "Veuillez entrer un nom valide (minimum 2 caractères)." };
   }
 
-  // 🔹 Validation basique de l’email
+  // Vérifier le téléphone (seulement chiffres, minimum 8)
+  const telRegex = /^[0-9]{8,15}$/;
+  if (!telRegex.test(clientData.tel)) {
+    return { valid: false, message: "Veuillez entrer un numéro de téléphone valide (8 à 15 chiffres)." };
+  }
+
+  // Vérifier l'email
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(clientData.email)) {
-    alert("❌ L'adresse e-mail est invalide.");
-    return Promise.resolve({ success: false, message: "Email invalide" });
+    return { valid: false, message: "Veuillez entrer une adresse e-mail valide." };
   }
 
-  // 🔹 Validation du téléphone (au moins 8 chiffres)
-  const telRegex = /^\+?\d{8,}$/;
-  if (!telRegex.test(clientData.tel)) {
-    alert("📞 Le numéro de téléphone doit contenir au moins 8 chiffres.");
-    return Promise.resolve({ success: false, message: "Téléphone invalide" });
+  // Vérifier l'agent sélectionné
+  if (!clientData.agent || clientData.agent === "Choisir un agent") {
+    return { valid: false, message: "Veuillez sélectionner un agent." };
   }
 
-  // ✅ Si tout est bon, on continue
+  return { valid: true };
+}
+
+// Fonction pour enregistrer le client
+function registerClient(clientData) {
+  const validation = validateClientData(clientData);
+  if (!validation.valid) {
+    alert(validation.message);
+    return Promise.resolve({ success: false, message: validation.message });
+  }
+
   const SAVE_URL = `https://script.google.com/macros/s/AKfycbzDeSDfYzb_953duQ-HuubILeZfzoRrtNe7d2Z7MEQbvVH9tzFZ1Dm0xTSHyZEgl7BIzg/exec` +
     `?action=saveClient&nom=${encodeURIComponent(clientData.nom)}` +
     `&tel=${encodeURIComponent(clientData.tel)}` +
@@ -910,7 +921,6 @@ function registerClient(clientData) {
     .then(response => response.json())
     .then(result => {
       if (result.success) {
-        // ✅ Succès → enregistrement local
         localStorage.setItem('clientRegistered', 'true');
         localStorage.setItem('clientData', JSON.stringify(clientData));
         console.log(result.message);
@@ -921,7 +931,6 @@ function registerClient(clientData) {
     })
     .catch(error => {
       console.error('Erreur de requête:', error);
-      alert("🚫 Une erreur est survenue lors de l'enregistrement.");
       return { success: false, message: error.message };
     });
 }
