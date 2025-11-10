@@ -313,7 +313,11 @@ div.className = "article produit-ligne" + (hasImage ? "" : " no-image");
 
 
           <div class="article-details">
-            <h3 style="text-transform: uppercase" onclick="showPopup('${escapeHtml(produit.image)}', '${escapeHtml(produit.nom)}', '${descriptionParam}', '${escapeHtml(produit.prix)}', '${escapeHtml(produit.tailles)}', '${escapeHtml(produit.code)}')">${escapeHtml(produit.nom)}', '${escapeHtml(produit.section)}</h3>
+            <h3 style="text-transform: uppercase"
+    onclick="showPopup('${escapeHtml(produit.image)}', '${escapeHtml(produit.nom)}', '${descriptionParam}', '${escapeHtml(produit.prix)}', '${escapeHtml(produit.tailles)}', '${escapeHtml(produit.code)}', '${escapeHtml(produit.section)}')">
+  ${escapeHtml(produit.nom)}
+</h3>
+
 
             
 
