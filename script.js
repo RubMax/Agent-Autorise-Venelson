@@ -719,8 +719,7 @@ ${(() => {
 
   let message = `Slt, Mwen vle pran sevis sa:\n` +
                  `${currentProduct.nom}\n` +
-                `Peyi : ${currentProduct.section}\n` +
-                `Preco : R$ ${currentProduct.prix}\n`;
+                `Peyi : ${currentProduct.section}\n`;
 
   if (currentProduct.selectedSize) {
     message += `\nT/Desc : ${currentProduct.selectedSize}`;
