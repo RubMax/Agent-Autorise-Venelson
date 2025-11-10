@@ -319,6 +319,7 @@ div.className = "article produit-ligne" + (hasImage ? "" : " no-image");
 </h3>
 
 
+
             
 
             <div class="details">
