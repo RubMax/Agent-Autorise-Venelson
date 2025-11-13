@@ -84,7 +84,7 @@
     <!-- En-tête fixe -->
     <div class="fixed-header">
       <div class="logo-container" style="display: flex">
-        <p>RECARGA CELULAR INT.</p>
+        <img id="logo" class="logo-img">
         <button id="installBtn" style="
           background-color:;
           color: white;
@@ -165,6 +165,20 @@
   <script src="install.js"></script>
 
   <script>
+    //=============================STOP ORDINATEUR===========================================
+   
+document.addEventListener('DOMContentLoaded', function () {
+  const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|Mobile/i.test(navigator.userAgent);
+
+  if (!isMobile) {
+    // 🔹 Redirige automatiquement vers la page locale "erreur-mobile.html"
+    const currentPath = window.location.pathname;
+    const basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+    window.location.href = basePath + "erreur-mobile.html";
+  }
+});
+
+    //======================================================================
     document.addEventListener("DOMContentLoaded", () => {
       const loader = document.getElementById("page-loader");
       const app = document.getElementById("app");
@@ -211,5 +225,8 @@
   </script>
 </body>
 </html>
+
+
+
 
 
