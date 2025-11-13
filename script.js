@@ -700,7 +700,7 @@ ${(() => {
 }
     
    // Ton numéro WhatsApp (à personnaliser)
-const WHATSAPP_NUMBER = "11960751318";
+const WHATSAPP_NUMBER = "11916204805";
 
 function sendWhatsAppMessage() { 
   const sizesArray = currentProduct.tailles.split(',').map(size => size.trim()).filter(size => size !== '');
@@ -963,7 +963,7 @@ function initRegistration() {
   const messageEl = document.getElementById('register-message');
 
   if (!popup || !form) {
-    console.error("❌ Erreur : le popup d'enregistrement est introuvable dans le HTML.");
+    console.error("❌ Erreur : le popup d'enregistrement est introuvable.");
     return;
   }
 
@@ -985,25 +985,30 @@ function initRegistration() {
       nom: document.getElementById('nom').value.trim(),
       tel: document.getElementById('tel').value.trim(),
       email: document.getElementById('email').value,
-      whatsappAgent: WHATSAPP_NUMBER // 👈 Ajouté ici
+      whatsappAgent: WHATSAPP_NUMBER
     };
 
-    // ✅ Validation visuelle
+    // Validation visuelle
     if (!validateFormInputs(formData)) {
       showRegisterMessage('⚠️ Veuillez corriger les champs en rouge avant de continuer.', true);
       return;
     }
 
-    // 🔄 Désactiver le bouton pendant l'enregistrement
     const submitBtn = document.querySelector('.register-btn');
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Enregistrement...';
+    submitBtn.textContent = 'Vérification...';
 
-    // 📩 Envoi vers le serveur
+    // Envoi vers le serveur
     registerClient(formData)
       .then(result => {
         if (result.success) {
-          showRegisterMessage('✅ Enregistrement réussi ! Accès à l\'application...', false);
+          // ✅ Succès - que ce soit un nouveau client ou un client existant
+          const message = result.dejaEnregistre 
+            ? '✅ Bienvenue de retour ! Accès à l\'application...'
+            : '✅ Enregistrement réussi ! Accès à l\'application...';
+          
+          showRegisterMessage(message, false);
+          
           setTimeout(() => {
             popup.style.display = 'none';
             document.body.classList.remove('registration-pending');
@@ -1022,7 +1027,6 @@ function initRegistration() {
       });
   });
 }
-
 
 // ✅ Chargement principal de l’app (inchangé)
 function loadMainApp() {
