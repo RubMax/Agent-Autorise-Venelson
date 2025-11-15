@@ -713,9 +713,10 @@ function sendWhatsAppMessage() {
     return;
   }
 
-  let message = `Slt, Mwen vle pran sevis sa:\n` +
+ let message = `Slt *Mr Venelson*, Koman ou ye?.\n` +
+                 `Mwen vle pran sevis sa:\n` +
                  `${currentProduct.nom}\n` +
-                `Peyi : ${currentProduct.section}\n`;
+                `*Pou* : ${currentProduct.section}\n`;
 
   if (currentProduct.selectedSize) {
     message += `\nDesc : ${currentProduct.selectedSize}`;
