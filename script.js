@@ -700,7 +700,7 @@ ${(() => {
 }
     
    // Ton numéro WhatsApp (à personnaliser)
-const WHATSAPP_NUMBER = "4184019184";
+const WHATSAPP_NUMBER = "11975050741";
 
 function sendWhatsAppMessage() { 
   const sizesArray = currentProduct.tailles.split(',').map(size => size.trim()).filter(size => size !== '');
