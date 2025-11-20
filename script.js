@@ -12,42 +12,81 @@
     
     document.addEventListener("DOMContentLoaded", () => {
   // Initialiser le système d'enregistrement
-  initRegistration();
-        const socialLinks = document.querySelector('.social-links');
-    const pedDePage = document.getElementById('ped de page');
- if (socialLinks) socialLinks.remove();
-    if (pedDePage) pedDePage.remove();
-      // Chargement des données
-     fetch("https://script.google.com/macros/s/AKfycbyRHCuLb0IC_fLpQs36UW_zzgnwmDHAJtDZHByZjz3rxHieXr-Xw54yt5NvCEZgzk64xQ/exec?page=api")
-  .then(response => response.json())
-  .then(data => {
-    displayProduits(data);
-  })
-  .catch(error => {
-    document.getElementById("produits").innerHTML =
-      "<div class='alert alert-danger'>Erreur de chargement des données</div>";
-    console.error(error);
+ // Variables pour stocker le produit en attente après enregistrement
+let pendingProduct = null;
+
+function initRegistration() {
+  const popup = document.getElementById('register-popup');
+  const form = document.getElementById('register-form');
+  const messageEl = document.getElementById('register-message');
+
+  if (!popup || !form) {
+    console.error("❌ Erreur : le popup d'enregistrement est introuvable.");
+    return;
+  }
+
+  // Charger la liste des agents
+  loadAgents();
+
+  // Vérifier si déjà enregistré
+  if (checkRegistration()) {
+    document.body.classList.remove('registration-pending');
+    return;
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    messageEl.style.display = 'none';
+
+    const formData = {
+      nom: document.getElementById('nom').value.trim(),
+      tel: document.getElementById('tel').value.trim(),
+      email: document.getElementById('email').value,
+      whatsappAgent: WHATSAPP_NUMBER
+    };
+
+    // Validation visuelle
+    if (!validateFormInputs(formData)) {
+      showRegisterMessage('⚠️ Veuillez corriger les champs en rouge avant de continuer.', true);
+      return;
+    }
+
+    const submitBtn = document.querySelector('.register-btn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Enregistrement...';
+
+    // Envoi vers le serveur
+    registerClient(formData)
+      .then(result => {
+        if (result.success) {
+          const message = result.dejaEnregistre 
+            ? '✅ Bienvenue de retour !'
+            : '✅ Enregistrement réussi !';
+          
+          showRegisterMessage(message, false);
+          
+          setTimeout(() => {
+            popup.style.display = 'none';
+            document.body.classList.remove('registration-pending');
+            
+            // Si un produit est en attente, afficher son popup
+            if (pendingProduct) {
+              showProductPopup(pendingProduct);
+              pendingProduct = null;
+            }
+          }, 1500);
+        } else {
+          showRegisterMessage('❌ Erreur : ' + (result.message || 'Veuillez réessayer.'), true);
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Continuer';
+        }
+      })
+      .catch(error => {
+        showRegisterMessage('🚫 Erreur : ' + error.message, true);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Continuer';
+      });
   });
-
-      
-      // Initialiser le défilement horizontal
-      setupHorizontalDragScroll();
-    });
-
-    function triggerScrollPulse() {
-    const el = document.querySelector('.old-price');
-
-    // Stopper l’animation subtile
-    el.classList.add('pause-subtle');
-
-    // Déclencher scrollPulse
-    el.classList.add('animate-badge');
-
-    // Après 2s, retirer l’animation scrollPulse et relancer subtlePulse
-    setTimeout(() => {
-        el.classList.remove('animate-badge');
-        el.classList.remove('pause-subtle');
-    }, 2000);
 }
 
 
@@ -498,9 +537,12 @@ ${(() => {
     
     
     /* Fonctions pour la galerie d'images */
-  function showPopup(imageUrl, nom, description, prix, tailles, code, section, hideWhatsappButton = false) {
+ // Nouvelle fonction pour gérer l'ouverture du popup produit
+function showProductPopup(productData) {
+  const { imageUrl, nom, description, prix, tailles, code, section } = productData;
+  
   // Supprimer la première image de la galerie
-  imageUrls = imageUrl.split(',').map(url => url.trim()).slice(1); // 👈 ici
+  imageUrls = imageUrl.split(',').map(url => url.trim()).slice(1);
   
   currentImageIndex = 0;
   document.getElementById("popup").style.display = "flex";
@@ -527,13 +569,13 @@ ${(() => {
   let sizesHTML = '';
   if (hasMultipleSizes) {
     sizesHTML = `
-  <p></p>
-  <div class="sizes-list" id="sizes-container">
-    ${sizesArray.map(size => `
-      <span class="size-item" onclick="selectSize(this, '${escapeHtml(size)}')">${escapeHtml(size)}</span>
-    `).join('')}
-  </div>
-`;
+      <p></p>
+      <div class="sizes-list" id="sizes-container">
+        ${sizesArray.map(size => `
+          <span class="size-item" onclick="selectSize(this, '${escapeHtml(size)}')">${escapeHtml(size)}</span>
+        `).join('')}
+      </div>
+    `;
   } else if (sizesArray.length === 1) {
     sizesHTML = `
       <p><strong>${escapeHtml(sizesArray[0])}</strong></p>
@@ -547,7 +589,6 @@ ${(() => {
     <h4>${escapeHtml(nom)}</h4>
     
     ${prix?.trim() ? (() => {
-      // Vérifie si le prix contient un séparateur "-"
       if (prix.includes('-')) {
         const [oldPrice, newPrice] = prix.split('-').map(p => p.trim());
         return `
@@ -565,7 +606,6 @@ ${(() => {
           </div>
         `;
       }
-      // Cas normal (un seul prix)
       return `
         <div class="price-highlight">
           <span class="currency-symbol">R$</span>
@@ -578,17 +618,15 @@ ${(() => {
       ${sizesHTML}
     </div>
     
-    
-
-    <div">
+    <div>
       <strong>Solicite ou realize este serviço no Whatsapp:</strong>
     </div>
-     <br>
+    <br>
     <a href="#" id="whatsappButton" class="whatsapp-btn" onclick="event.preventDefault(); sendWhatsAppMessage();">
       <i class="fab fa-whatsapp"></i> WhatsApp
     </a>
-<br>
-    <div">
+    <br>
+    <div>
       <strong>Descrição:</strong>
       <div class="description-text" color: #0081fe;">
         ${decodeURIComponent(description).replace(/\n/g, '<br>')}
@@ -596,20 +634,38 @@ ${(() => {
     </div>
   `;
 
-  // Afficher ou masquer le bouton WhatsApp selon le paramètre
-  const whatsappButton = document.getElementById("whatsappButton");
-  if (hideWhatsappButton) {
-    whatsappButton.style.display = "none";
-  } else {
-    whatsappButton.style.display = "inline-block";
-  }
-
   // Sélection automatique de la taille si une seule
   if (!hasMultipleSizes && sizesArray.length === 1) {
     const sizeElements = document.querySelectorAll('.size-item');
     if (sizeElements.length > 0) {
       sizeElements[0].classList.add('selected');
     }
+  }
+}
+
+// Modifier la fonction showPopup pour gérer l'enregistrement
+function showPopup(imageUrl, nom, description, prix, tailles, code, section, hideWhatsappButton = false) {
+  // Stocker les données du produit en attente
+  pendingProduct = {
+    imageUrl,
+    nom,
+    description,
+    prix,
+    tailles,
+    code,
+    section,
+    hideWhatsappButton
+  };
+
+  // Vérifier si l'utilisateur est déjà enregistré
+  if (checkRegistration()) {
+    // Si déjà enregistré, afficher directement le popup du produit
+    showProductPopup(pendingProduct);
+    pendingProduct = null;
+  } else {
+    // Sinon, afficher le popup d'enregistrement
+    document.getElementById('register-popup').style.display = 'flex';
+    document.body.classList.add('registration-pending');
   }
 }
 
