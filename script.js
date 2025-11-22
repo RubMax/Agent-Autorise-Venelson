@@ -18,7 +18,7 @@
  if (socialLinks) socialLinks.remove();
     if (pedDePage) pedDePage.remove();
       // Chargement des données
-     fetch("https://script.google.com/macros/s/AKfycbyRHCuLb0IC_fLpQs36UW_zzgnwmDHAJtDZHByZjz3rxHieXr-Xw54yt5NvCEZgzk64xQ/exec?page=api")
+     fetch("https://script.google.com/macros/s/AKfycbx0Kxwp5Do05aCkOtFNQM2x1Gh72AyzI8qcENzMityDr8bErm9Cp6nI6Yk6J0psoebj/exec?page=api")
   .then(response => response.json())
   .then(data => {
     displayProduits(data);
@@ -370,8 +370,7 @@ ${(() => {
   `;
 })()}
 <br>
-            <button class="open-button" onclick="showPopup('${escapeHtml(produit.image)}', '${escapeHtml(produit.nom)}', '${descriptionParam}', '${escapeHtml(produit.prix)}', '${escapeHtml(produit.tailles)}', '${escapeHtml(produit.code)}', '${escapeHtml(produit.section)}')">Solicite/Realise</button>
-            
+            <button class="open-button" onclick="handleProductClick('${escapeHtml(produit.image)}', '${escapeHtml(produit.nom)}', '${descriptionParam}', '${escapeHtml(produit.prix)}', '${escapeHtml(produit.tailles)}', '${escapeHtml(produit.code)}', '${escapeHtml(produit.section)}')">Solicite/Realise</button>
           
 
           </div>
@@ -393,7 +392,22 @@ ${(() => {
   }
 }
 
-
+function handleProductClick(imageUrl, nom, description, prix, tailles, code, section) {
+  // Vérifier si l'utilisateur est enregistré
+  if (checkRegistration()) {
+    // Si enregistré, afficher directement le popup produit
+    showPopup(imageUrl, nom, description, prix, tailles, code, section);
+  } else {
+    // Sinon, afficher le popup d'enregistrement
+    showRegistrationPopup();
+    
+    // Stocker les infos du produit pour plus tard
+    currentProduct = {
+      imageUrl, nom, description, prix, tailles, code, section,
+      selectedSize: null
+    };
+  }
+}
     
     
      function startPubCarousel() {
@@ -499,12 +513,16 @@ ${(() => {
     
     /* Fonctions pour la galerie d'images */
   function showPopup(imageUrl, nom, description, prix, tailles, code, section, hideWhatsappButton = false) {
-  // Supprimer la première image de la galerie
-  imageUrls = imageUrl.split(',').map(url => url.trim()).slice(1); // 👈 ici
+   // Vérifier l'enregistrement avant d'afficher le popup produit
+  if (!checkRegistration()) {
+    showRegistrationPopup(); // Affiche le popup d'enregistrement
+    return; // Ne pas afficher le popup produit
+  }
   
+  // Si déjà enregistré, afficher normalement le popup produit
+  imageUrls = imageUrl.split(',').map(url => url.trim()).slice(1);
   currentImageIndex = 0;
   document.getElementById("popup").style.display = "flex";
-
   // Supprimer les textes entre parenthèses dans "tailles"
   const cleanedTailles = tailles.replace(/\([^)]*\)/g, '').trim();
   const sizesArray = cleanedTailles.split(',').map(size => size.trim()).filter(size => size !== '');
@@ -675,6 +693,74 @@ ${(() => {
       touchEndX = e.changedTouches[0].screenX;
       handleSwipe();
     }, {passive: true});
+
+
+    function handleFormSubmit(e) {
+  e.preventDefault();
+  const messageEl = document.getElementById('register-message');
+  messageEl.style.display = 'none';
+
+  const formData = {
+    nom: document.getElementById('nom').value.trim(),
+    tel: document.getElementById('tel').value.trim(),
+    email: document.getElementById('email').value,
+    whatsappAgent: WHATSAPP_NUMBER
+  };
+
+  // Validation
+  if (!validateFormInputs(formData)) {
+    showRegisterMessage('⚠️ Veuillez corriger les champs en rouge avant de continuer.', true);
+    return;
+  }
+
+  const submitBtn = document.querySelector('.register-btn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Vérification...';
+
+  // Envoi vers le serveur
+  registerClient(formData)
+    .then(result => {
+      if (result.success) {
+        showRegisterMessage('✅ Enregistrement réussi !', false);
+        
+        setTimeout(() => {
+          // Cacher le popup d'enregistrement
+          document.getElementById('register-popup').style.display = 'none';
+          document.body.classList.remove('registration-pending');
+          
+          // Si un produit était sélectionné, afficher son popup
+          if (currentProduct.nom) {
+            showPopup(
+              currentProduct.imageUrl,
+              currentProduct.nom,
+              currentProduct.description,
+              currentProduct.prix,
+              currentProduct.tailles,
+              currentProduct.code,
+              currentProduct.section
+            );
+          }
+        }, 1500);
+      } else {
+        showRegisterMessage('❌ Erreur : ' + (result.message || 'Veuillez réessayer.'), true);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'S\'enregistrer';
+      }
+    })
+    .catch(error => {
+      showRegisterMessage('🚫 Erreur : ' + error.message, true);
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'S\'enregistrer';
+    });
+}
+function closeRegistrationPopup() {
+  const popup = document.getElementById('register-popup');
+  popup.style.display = 'none';
+  document.body.classList.remove('registration-pending');
+  
+  // Réinitialiser le produit courant
+  currentProduct = {};
+}
     
     function handleSwipe() {
       const threshold = 50;
@@ -700,7 +786,7 @@ ${(() => {
 }
     
    // Ton numéro WhatsApp (à personnaliser)
-const WHATSAPP_NUMBER = "5511975050741";
+const WHATSAPP_NUMBER = "+5511916204805";
 
 function sendWhatsAppMessage() { 
   const sizesArray = currentProduct.tailles.split(',').map(size => size.trim()).filter(size => size !== '');
@@ -713,10 +799,9 @@ function sendWhatsAppMessage() {
     return;
   }
 
- let message = `Slt *Mr Venelson*, Koman ou ye?.\n` +
-                 `Mwen vle pran sevis sa:\n` +
+  let message = `Slt, Mwen vle pran sevis sa:\n` +
                  `${currentProduct.nom}\n` +
-                `*Pou* : ${currentProduct.section}\n`;
+                `Peyi : ${currentProduct.section}\n`;
 
   if (currentProduct.selectedSize) {
     message += `\nDesc : ${currentProduct.selectedSize}`;
@@ -804,7 +889,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tapCount === 3) {
       tapCount = 0;
 
-      fetch('https://script.google.com/macros/s/AKfycbwoTyj8mpGYPfWCOxszGA-SPYTSBsJbJoHyFKgIr-b5xSAu-CO9pgE3bCebLGAWCVDnPg/exec?page=popupWelcome')
+      fetch('https://script.google.com/macros/s/AKfycbx0Kxwp5Do05aCkOtFNQM2x1Gh72AyzI8qcENzMityDr8bErm9Cp6nI6Yk6J0psoebj/exec?page=popupWelcome')
         .then(response => response.text())
         .then(content => {
           document.querySelector('#popup-welcome .popup-content p').innerText = content;
@@ -845,7 +930,7 @@ function initLogoTouchHandler(logo) {
       tapCount = 0;
       console.log("🎉 3 taps détectés !");
 
-      fetch('https://script.google.com/macros/s/AKfycbwoTyj8mpGYPfWCOxszGA-SPYTSBsJbJoHyFKgIr-b5xSAu-CO9pgE3bCebLGAWCVDnPg/exec?page=popupWelcome')
+      fetch('https://script.google.com/macros/s/AKfycbx0Kxwp5Do05aCkOtFNQM2x1Gh72AyzI8qcENzMityDr8bErm9Cp6nI6Yk6J0psoebj/exec?page=popupWelcome')
         .then(r => r.text())
         .then(content => {
           document.querySelector('#popup-welcome .popup-content p').innerText = content;
@@ -862,7 +947,7 @@ let agentsList = [];
 
 // Fonction pour charger la liste des agents
 function loadAgents() {
-  const AGENTS_URL = "https://script.google.com/macros/s/AKfycbzDeSDfYzb_953duQ-HuubILeZfzoRrtNe7d2Z7MEQbvVH9tzFZ1Dm0xTSHyZEgl7BIzg/exec?action=getAgents";
+  const AGENTS_URL = "https://script.google.com/macros/s/AKfycbx0Kxwp5Do05aCkOtFNQM2x1Gh72AyzI8qcENzMityDr8bErm9Cp6nI6Yk6J0psoebj/exec?action=getAgents";
   
   fetch(AGENTS_URL)
     .then(response => response.json())
@@ -885,7 +970,7 @@ function loadAgents() {
 // Fonction pour enregistrer le client
 // ✅ Fonction pour enregistrer le client
 function registerClient(clientData) {
-  const SAVE_URL = `https://script.google.com/macros/s/AKfycbzDeSDfYzb_953duQ-HuubILeZfzoRrtNe7d2Z7MEQbvVH9tzFZ1Dm0xTSHyZEgl7BIzg/exec` +
+  const SAVE_URL = `https://script.google.com/macros/s/AKfycbx0Kxwp5Do05aCkOtFNQM2x1Gh72AyzI8qcENzMityDr8bErm9Cp6nI6Yk6J0psoebj/exec` +
     `?action=saveClient&nom=${encodeURIComponent(clientData.nom)}` +
     `&tel=${encodeURIComponent(clientData.tel)}` +
     `&email=${encodeURIComponent(clientData.email)}` +
@@ -961,77 +1046,39 @@ function showRegisterMessage(message, isError = false) {
 function initRegistration() {
   const popup = document.getElementById('register-popup');
   const form = document.getElementById('register-form');
-  const messageEl = document.getElementById('register-message');
+  
+  // Cacher le popup d'enregistrement au démarrage
+  popup.style.display = 'none';
+  document.body.classList.remove('registration-pending');
+  
+  // Charger la liste des agents
+  loadAgents();
+  
+  // Gérer la soumission du formulaire
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    handleFormSubmit(e);
+  });
+}
 
-  if (!popup || !form) {
-    console.error("❌ Erreur : le popup d'enregistrement est introuvable.");
-    return;
-  }
-
+// Nouvelle fonction pour afficher le popup d'enregistrement
+function showRegistrationPopup() {
+  const popup = document.getElementById('register-popup');
+  
+  // Vérifier si déjà enregistré
   if (checkRegistration()) {
-    popup.style.display = 'none';
-    document.body.classList.remove('registration-pending');
-    return;
+    return true; // Déjà enregistré, on peut continuer
   }
-
+  
+  // Afficher le popup d'enregistrement
   popup.style.display = 'flex';
   document.body.classList.add('registration-pending');
-  loadAgents();
-
-  form.addEventListener('submit', function (e) {
-    e.preventDefault();
-    messageEl.style.display = 'none';
-
-    const formData = {
-      nom: document.getElementById('nom').value.trim(),
-      tel: document.getElementById('tel').value.trim(),
-      email: document.getElementById('email').value,
-      whatsappAgent: WHATSAPP_NUMBER
-    };
-
-    // Validation visuelle
-    if (!validateFormInputs(formData)) {
-      showRegisterMessage('⚠️ Veuillez corriger les champs en rouge avant de continuer.', true);
-      return;
-    }
-
-    const submitBtn = document.querySelector('.register-btn');
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Vérification...';
-
-    // Envoi vers le serveur
-    registerClient(formData)
-      .then(result => {
-        if (result.success) {
-          // ✅ Succès - que ce soit un nouveau client ou un client existant
-          const message = result.dejaEnregistre 
-            ? '✅ Bienvenue de retour ! Accès à l\'application...'
-            : '✅ Enregistrement réussi ! Accès à l\'application...';
-          
-          showRegisterMessage(message, false);
-          
-          setTimeout(() => {
-            popup.style.display = 'none';
-            document.body.classList.remove('registration-pending');
-            loadMainApp();
-          }, 1500);
-        } else {
-          showRegisterMessage('❌ Erreur : ' + (result.message || 'Veuillez réessayer.'), true);
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Accéder à l\'application';
-        }
-      })
-      .catch(error => {
-        showRegisterMessage('🚫 Erreur : ' + error.message, true);
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Accéder à l\'application';
-      });
-  });
+  return false; // Pas encore enregistré
 }
 
 // ✅ Chargement principal de l’app (inchangé)
 function loadMainApp() {
-  const BASE = "https://script.google.com/macros/s/AKfycbzDeSDfYzb_953duQ-HuubILeZfzoRrtNe7d2Z7MEQbvVH9tzFZ1Dm0xTSHyZEgl7BIzg/exec";
+  const BASE = "https://script.google.com/macros/s/AKfycbx0Kxwp5Do05aCkOtFNQM2x1Gh72AyzI8qcENzMityDr8bErm9Cp6nI6Yk6J0psoebj/exec";
   const logoUrlAPI = BASE + "?page=logo";
   const dataUrlAPI = BASE + "?page=api";
 
