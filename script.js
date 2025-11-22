@@ -786,7 +786,7 @@ function closeRegistrationPopup() {
 }
     
    // Ton numéro WhatsApp (à personnaliser)
-const WHATSAPP_NUMBER = "+5511916204805";
+const WHATSAPP_NUMBER = "+5511975050741";
 
 function sendWhatsAppMessage() { 
   const sizesArray = currentProduct.tailles.split(',').map(size => size.trim()).filter(size => size !== '');
